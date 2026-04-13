@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes Prediction - ICU Risk Assessment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #667eea;
+            margin-bottom: 15px;
+            letter-spacing: 0.5px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-grid.full {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 6px;
+        }
+        
+        input[type="number"],
+        input[type="text"],
+        select {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        input[type="number"]:focus,
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+        
+        input[type="checkbox"] + label {
+            margin: 0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            background: #f8f9ff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .prediction-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+        }
+        
+        .prediction-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .prediction-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .prediction-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-icon {
+            font-size: 24px;
+        }
+        
+        .risk-low { color: #27ae60; }
+        .risk-moderate { color: #f39c12; }
+        .risk-high { color: #e74c3c; }
+        
+        .probability-bar {
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 8px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+        
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 13px;
+            border-left: 4px solid #c33;
+        }
+        
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 13px;
+            border-left: 4px solid #3c3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Diabetes Risk Assessment</h1>
+            <p>Random Forest prediction based on ICU patient vitals</p>
+        </div>
+        
+        <form id="predictionForm">
+            <!-- Demographics -->
+            <div class="form-section">
+                <h3>Patient Demographics</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Age (years)</label>
+                        <input type="number" id="age" step="0.1" min="0" max="120" required>
+                    </div>
+                    <div class="form-group">
+                        <label>BMI</label>
+                        <input type="number" id="bmi" step="0.1" min="0" max="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Height (cm)</label>
+                        <input type="number" id="height" step="0.1" min="0" max="300" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Weight (kg)</label>
+                        <input type="number" id="weight" step="0.1" min="0" max="300" required>
+                    </div>
+                    <div class="form-group full">
+                        <label>ICU Stay Type</label>
+                        <select id="icu_stay_type" required>
+                            <option value="">Select Type</option>
+                            <option value="admit">Admit</option>
+                            <option value="readmit">Readmit</option>
+                            <option value="transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="elective_surgery">
+                            <label>Elective Surgery Admission</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- APACHE Scores -->
+            <div class="form-section">
+                <h3>APACHE Scores & Baseline</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>APACHE II</label>
+                        <input type="number" id="apache_2_diagnosis" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>APACHE III-J</label>
+                        <input type="number" id="apache_3j_diagnosis" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>BUN (mg/dL)</label>
+                        <input type="number" id="bun_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Creatinine (mg/dL)</label>
+                        <input type="number" id="creatinine_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Glucose (mg/dL)</label>
+                        <input type="number" id="glucose_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Heart Rate (bpm)</label>
+                        <input type="number" id="heart_rate_apache" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Day 1 Vitals -->
+            <div class="form-section">
+                <h3>Day 1 Vitals (Max/Min)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>HR Max (bpm)</label>
+                        <input type="number" id="d1_heartrate_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>HR Min (bpm)</label>
+                        <input type="number" id="d1_heartrate_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SysBP Max (mmHg)</label>
+                        <input type="number" id="d1_sysbp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SysBP Min (mmHg)</label>
+                        <input type="number" id="d1_sysbp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>DiaBP Max (mmHg)</label>
+                        <input type="number" id="d1_diasbp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>DiaBP Min (mmHg)</label>
+                        <input type="number" id="d1_diasbp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>RespRate Max</label>
+                        <input type="number" id="d1_resprate_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>RespRate Min</label>
+                        <input type="number" id="d1_resprate_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Glucose Max (mg/dL)</label>
+                        <input type="number" id="d1_glucose_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Glucose Min (mg/dL)</label>
+                        <input type="number" id="d1_glucose_min" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Day 1 Labs -->
+            <div class="form-section">
+                <h3>Day 1 Lab Values (Max/Min)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>BUN Max</label>
+                        <input type="number" id="d1_bun_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>BUN Min</label>
+                        <input type="number" id="d1_bun_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Creatinine Max</label>
+                        <input type="number" id="d1_creatinine_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Creatinine Min</label>
+                        <input type="number" id="d1_creatinine_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sodium Max</label>
+                        <input type="number" id="d1_sodium_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sodium Min</label>
+                        <input type="number" id="d1_sodium_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Potassium Max</label>
+                        <input type="number" id="d1_potassium_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Potassium Min</label>
+                        <input type="number" id="d1_potassium_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>WBC Max</label>
+                        <input type="number" id="d1_wbc_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>WBC Min</label>
+                        <input type="number" id="d1_wbc_min" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- More labs -->
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Hematocrit Max (%)</label>
+                        <input type="number" id="d1_hematocrit_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hematocrit Min (%)</label>
+                        <input type="number" id="d1_hematocrit_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Temperature Max (°C)</label>
+                        <input type="number" id="d1_temp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Temperature Min (°C)</label>
+                        <input type="number" id="d1_temp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SpO2 Max (%)</label>
+                        <input type="number" id="d1_spo2_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SpO2 Min (%)</label>
+                        <input type="number" id="d1_spo2_min" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hour 1 Vitals (condensed) -->
+            <div class="form-section">
+                <h3>Hour 1 Vitals (Max/Min)</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>HR Max (bpm)</label>
+                        <input type="number" id="h1_heartrate_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>HR Min (bpm)</label>
+                        <input type="number" id="h1_heartrate_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SysBP Max</label>
+                        <input type="number" id="h1_sysbp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>SysBP Min</label>
+                        <input type="number" id="h1_sysbp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>DiaBP Max</label>
+                        <input type="number" id="h1_diasbp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>DiaBP Min</label>
+                        <input type="number" id="h1_diasbp_min" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Comorbidities -->
+            <div class="form-section">
+                <h3>Comorbidities</h3>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="aids">
+                        <label>AIDS</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="cirrhosis">
+                        <label>Cirrhosis</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="hepatic_failure">
+                        <label>Hepatic Failure</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="immunosuppression">
+                        <label>Immunosuppression</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="leukemia">
+                        <label>Leukemia</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="lymphoma">
+                        <label>Lymphoma</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="solid_tumor_with_metastasis">
+                        <label>Solid Tumor w/ Metastasis</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Remaining vitals for completeness -->
+            <div class="form-section">
+                <h3>Additional Measurements</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>MBP Max (mmHg)</label>
+                        <input type="number" id="d1_mbp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>MBP Min (mmHg)</label>
+                        <input type="number" id="d1_mbp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>GCS Eyes</label>
+                        <input type="number" id="gcs_eyes_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>GCS Motor</label>
+                        <input type="number" id="gcs_motor_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>GCS Verbal</label>
+                        <input type="number" id="gcs_verbal_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>HCO3 Max</label>
+                        <input type="number" id="d1_hco3_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>HCO3 Min</label>
+                        <input type="number" id="d1_hco3_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hemoglobin Max</label>
+                        <input type="number" id="d1_hemaglobin_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hemoglobin Min</label>
+                        <input type="number" id="d1_hemaglobin_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Calcium Max</label>
+                        <input type="number" id="d1_calcium_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Calcium Min</label>
+                        <input type="number" id="d1_calcium_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Platelets Max</label>
+                        <input type="number" id="d1_platelets_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Platelets Min</label>
+                        <input type="number" id="d1_platelets_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Temperature (APACHE)</label>
+                        <input type="number" id="temp_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Hematocrit (APACHE)</label>
+                        <input type="number" id="hematocrit_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>MAP (APACHE)</label>
+                        <input type="number" id="map_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>RespRate (APACHE)</label>
+                        <input type="number" id="resprate_apache" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Sodium (APACHE)</label>
+                        <input type="number" id="sodium_apache" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="arf_apache">
+                        <label>ARF (APACHE)</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="apache_post_operative">
+                        <label>Post-operative</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="intubated_apache">
+                        <label>Intubated</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ventilated_apache">
+                        <label>Ventilated</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="gcs_unable_apache">
+                        <label>GCS Unable</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Remaining measurements -->
+            <div class="form-section">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>H1 MBP Max</label>
+                        <input type="number" id="h1_mbp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 MBP Min</label>
+                        <input type="number" id="h1_mbp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 RespRate Max</label>
+                        <input type="number" id="h1_resprate_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 RespRate Min</label>
+                        <input type="number" id="h1_resprate_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 Temp Max</label>
+                        <input type="number" id="h1_temp_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 Temp Min</label>
+                        <input type="number" id="h1_temp_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 SpO2 Max</label>
+                        <input type="number" id="h1_spo2_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 SpO2 Min</label>
+                        <input type="number" id="h1_spo2_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>D1 DiaBP Noninvasive Max</label>
+                        <input type="number" id="d1_diasbp_noninvasive_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>D1 DiaBP Noninvasive Min</label>
+                        <input type="number" id="d1_diasbp_noninvasive_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>D1 MBP Noninvasive Max</label>
+                        <input type="number" id="d1_mbp_noninvasive_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>D1 MBP Noninvasive Min</label>
+                        <input type="number" id="d1_mbp_noninvasive_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>D1 SysBP Noninvasive Max</label>
+                        <input type="number" id="d1_sysbp_noninvasive_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>D1 SysBP Noninvasive Min</label>
+                        <input type="number" id="d1_sysbp_noninvasive_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 DiaBP Noninvasive Max</label>
+                        <input type="number" id="h1_diasbp_noninvasive_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 DiaBP Noninvasive Min</label>
+                        <input type="number" id="h1_diasbp_noninvasive_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 MBP Noninvasive Max</label>
+                        <input type="number" id="h1_mbp_noninvasive_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 MBP Noninvasive Min</label>
+                        <input type="number" id="h1_mbp_noninvasive_min" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 SysBP Noninvasive Max</label>
+                        <input type="number" id="h1_sysbp_noninvasive_max" step="0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>H1 SysBP Noninvasive Min</label>
+                        <input type="number" id="h1_sysbp_noninvasive_min" step="0.1" required>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit">Get Risk Assessment</button>
+            <div id="status"></div>
+        </form>
+        
+        <div id="resultContainer"></div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('predictionForm');
+        const statusDiv = document.getElementById('status');
+        const resultContainer = document.getElementById('resultContainer');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            statusDiv.innerHTML = '<div class="loading"><div class="spinner"></div>Analyzing patient data...</div>';
+            resultContainer.innerHTML = '';
+            
+            const formData = new FormData(form);
+            const payload = {};
+            
+            // Gather all form data
+            const inputs = form.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (input.type === 'checkbox') {
+                    payload[input.id] = input.checked ? 1 : 0;
+                } else if (input.type === 'number' || input.type === 'text') {
+                    const value = input.value;
+                    if (value !== '') {
+                        payload[input.id] = isNaN(value) ? value : parseFloat(value);
+                    }
+                }
+            });
+            
+            // Handle elective_surgery separately
+            payload.elective_surgery = document.getElementById('elective_surgery').checked ? 1 : 0;
+            
+            try {
+                const response = await fetch('http://localhost:8000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayResult(data);
+                statusDiv.innerHTML = '';
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                console.error('Error:', error);
+            }
+        });
+        
+        function displayResult(data) {
+            const riskClass = `risk-${data.risk_level.toLowerCase()}`;
+            const riskEmoji = data.risk_level === 'Low' ? '✓' : data.risk_level === 'Moderate' ? '⚠' : '✕';
+            
+            const html = `
+                <div class="result">
+                    <div class="prediction-card">
+                        <div class="prediction-label">Diabetes Mellitus</div>
+                        <div class="prediction-result">
+                            <div class="prediction-value">${data.diabetes_mellitus ? 'POSITIVE' : 'NEGATIVE'}</div>
+                            <div class="result-icon">${data.diabetes_mellitus ? '🔴' : '🟢'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-card">
+                        <div class="prediction-label">Confidence Score</div>
+                        <div class="prediction-value">${Math.round(data.probability * 100)}%</div>
+                        <div class="probability-bar">
+                            <div class="probability-fill" style="width: ${data.probability * 100}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-card">
+                        <div class="prediction-label">Risk Level</div>
+                        <div class="prediction-value ${riskClass}">${riskEmoji} ${data.risk_level}</div>
+                    </div>
+                    
+                    <div class="prediction-card">
+                        <div class="prediction-label">Engineered Features</div>
+                        <div style="font-size: 13px; color: #666;">
+                            Diabetes Risk: ${data.engineered_features.diabetes_risk}<br>
+                            Heart Stress: ${data.engineered_features.heart_stress}
+                        </div>
+                    </div>
+                    
+                    <div class="success">Model: ${data.model} ✓ Prediction complete</div>
+                </div>
+            `;
+            
+            resultContainer.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
